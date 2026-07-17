@@ -1,0 +1,1136 @@
+  METHOD search_dar_elect.
+
+    REFRESH : gt_elect_dar.
+    DATA : lt_table  TYPE sqf_se16_select_options.
+    DATA : lr_col TYPE REF TO if_bol_entity_col.
+    DATA : lr_col2 TYPE REF TO cl_crm_bol_entity_col.
+    DATA : lr_access TYPE REF TO if_bol_bo_property_access.
+    DATA : lr_entity TYPE REF TO cl_crm_bol_entity.
+    DATA : lv_guid TYPE crmt_object_guid.
+    DATA : lv_count TYPE i.
+    DATA : ls_order TYPE crmst_query_r_srvo_btil.
+    DATA : lr_iterator TYPE REF TO if_bol_entity_col_iterator.
+*********BOC by MH_SHIVANIM on 14/03/2023 - S/4 HANA CMM Conversion
+*    DATA : lt_docflow_s_header TYPE STANDARD TABLE OF crmt_portal_docflow_header.
+    DATA : lt_docflow_s_header TYPE STANDARD TABLE OF zwcrmt_portal_docflow_header.
+*********EOC by MH_SHIVANIM on 14/03/2023 - S/4 HANA CMM Conversion
+    TYPES : BEGIN OF ty_noc,
+              guid         TYPE crmt_object_guid,
+              object_id	   TYPE crmt_object_id_db,
+              process_type TYPE crmt_process_type_db,
+              posting_date TYPE crmt_posting_date,
+              created_at   TYPE comt_created_at_usr,
+              changed_at   TYPE comt_changed_at_usr,
+
+*********BOC by MH_SHIVANIM on 14/03/2023 - S/4 HANA CMM Conversion
+
+*              zzfld000007   TYPE zdtel000035,
+*              zzfld000023   TYPE zdtel000090,
+*              zzfld0000ej   TYPE zdtel000180,
+*              zzfld00000h  TYPE zdtel000045,
+*              zzfld00001z  TYPE zdtel00008k,
+*              zzfld00005k  TYPE zdtel0000nv,
+              zzfld000007	 TYPE zzd_zzfld000007,
+              zzfld000023	 TYPE zzd_zzfld000023,
+              zzfld0000ej	 TYPE zzd_zzfld0000ej,
+              zzfld00000h  TYPE zzd_zzfld00000h,
+              zzfld00001z  TYPE zzd_zzfld00001z,
+              zzfld00005k  TYPE zzd_zzfld00005k,
+*********EOC by MH_SHIVANIM on 14/03/2023 - S/4 HANA CMM Conversion
+            END OF ty_noc.
+
+
+    DATA : wa_noc  TYPE ty_noc,
+           lt_noc  TYPE STANDARD TABLE OF ty_noc,
+           lt_noc1 TYPE STANDARD TABLE OF ty_noc.
+
+    DATA : approved_date TYPE  string,
+           check_date    TYPE sy-datum.
+
+    FIELD-SYMBOLS : <fs_noc> LIKE LINE OF lt_noc.
+
+    DATA : ls_options TYPE sqf_se16_select_option.
+
+    REFRESH : lt_table.
+
+    FIELD-SYMBOLS : <fs_query> TYPE crmst_query_r_srvo_btil.
+
+
+**** Electr Sign options for Search Criteria
+    gs_electr_se-sign = 'I'.
+    gs_electr_se-option = 'EQ'.
+    gs_electr_se2-sign = 'I'.
+    IF gs_electr_se2-high IS INITIAL.
+      gs_electr_se2-option = 'EQ'.
+    ELSE.
+      gs_electr_se2-option = 'BT'.
+    ENDIF.
+
+    ls_options-fieldname = 'SOLD_TO_PARTY'.
+    ls_options-low = gs_owner_header-bp_number.
+    ls_options-sign = 'I'.
+    ls_options-option = 'EQ'.
+    APPEND ls_options TO lt_table.
+
+    IF gs_electr_se-low IS NOT INITIAL.
+
+      APPEND gs_electr_se TO lt_table.
+    ENDIF.
+    IF gs_electr_se2-low IS NOT INITIAL.
+      APPEND gs_electr_se2 TO lt_table.
+    ENDIF.
+
+
+    IF gv_category NE 'Y02'(y02). " Revision case
+
+*      ls_options-fieldname = 'ZZFLD00002V'. S/4 change
+      ls_options-fieldname = 'ZZD_ZZFLD00002V_SRH'.
+      ls_options-low = 'Yes'.
+      ls_options-sign = 'I'.
+      ls_options-option = 'NE'.
+      APPEND ls_options TO lt_table.
+
+*** Start of changes for Preliminary NOC - 11 Oct 2017
+
+***      ls_options-fieldname = 'CATEGORY'.
+***      ls_options-low = 'Y32'.
+***      ls_options-sign = 'I'.
+***      ls_options-option = 'NE'.
+***      APPEND ls_options TO lt_table.
+
+*** End of changes for Preliminary NOC - 11 Oct 2017
+
+*** Start code by raju due to P21-0067 - Water NOC Auto Information NOC on 02/10/2024
+      IF gv_process_type NE 'YDA5'.
+
+        ls_options-fieldname = 'CATEGORY'.
+        ls_options-low = 'Y39'.
+        ls_options-sign = 'I'.
+        ls_options-option = 'NE'.
+        APPEND ls_options TO lt_table.
+      ENDIF.
+*** END code by raju due to P21-0067 - Water NOC Auto Information NOC on 02/10/2024
+
+
+
+*      ls_options-fieldname = 'STATUS_COMMON'.
+*      ls_options-low = 'E0080Y0000003'.
+*      ls_options-sign = 'I'.
+*      ls_options-option = 'EQ'.
+*      APPEND ls_options TO lt_table.
+      ls_options-fieldname = 'STAT_LIFECYCLE'.
+      ls_options-low = '65'.
+      ls_options-sign = 'I'.
+      ls_options-option = 'EQ'.
+      APPEND ls_options TO lt_table.
+*
+*      ls_options-fieldname = 'STATUS_COMMON'.
+*      ls_options-low = 'E0080Y0000025'.
+*      ls_options-sign = 'I'.
+*      ls_options-option = 'EQ'.
+*      APPEND ls_options TO lt_table.
+      ls_options-fieldname = 'STAT_LIFECYCLE'.
+      ls_options-low = '520'.
+      ls_options-sign = 'I'.
+      ls_options-option = 'EQ'.
+      APPEND ls_options TO lt_table.
+
+
+      ls_options-fieldname = 'PROCESS_TYPE'.
+      ls_options-low = 'YDM1'.
+      ls_options-sign = 'I'.
+      ls_options-option = 'EQ'.
+      APPEND ls_options TO lt_table.
+
+*      IF gv_category NE 'Y14' .
+        ls_options-fieldname = 'PROCESS_TYPE'.
+        ls_options-low = 'YBNE'.
+        ls_options-sign = 'I'.
+        ls_options-option = 'EQ'.
+        APPEND ls_options TO lt_table.
+*      ENDIF .
+    ELSE.
+
+**    begin of changes by satyajeet
+
+      IF gs_electr_se-low IS NOT INITIAL.
+*     Start of code commenting by MH_JAITHERA for S/4 Migration(STATUS_COMMON) is not available in search query
+*        ls_options-fieldname = 'STATUS_COMMON'.
+*        ls_options-low = 'E0080Y0000003'.
+*        ls_options-sign = 'I'.
+*        ls_options-option = 'EQ'.
+*        APPEND ls_options TO lt_table.
+
+        ls_options-fieldname = 'STAT_LIFECYCLE'.
+        ls_options-low = '65'.
+        ls_options-sign = 'I'.
+        ls_options-option = 'EQ'.
+        APPEND ls_options TO lt_table.
+*     End of code commenting by MH_JAITHERA for S/4 Migration(STATUS_COMMON) is not available in search query
+        ls_options-fieldname = 'CATEGORY'.
+        ls_options-low = 'Y02'.
+        ls_options-sign = 'I'.
+        ls_options-option = 'EQ'.
+        APPEND ls_options TO lt_table.
+*     Start of changes by Vasu Gorli - eForm 210371.
+        ls_options-fieldname = 'CATEGORY'.
+        ls_options-low = 'Y03'.
+        ls_options-sign = 'I'.
+        ls_options-option = 'EQ'.
+        APPEND ls_options TO lt_table.
+*     End of changes by Vasu Gorli - eForm 210371.
+
+        ls_options-fieldname = 'PROCESS_TYPE'.
+        ls_options-low = 'YBNE'.
+        ls_options-sign = 'I'.
+        ls_options-option = 'EQ'.
+        APPEND ls_options TO lt_table.
+
+      ELSE .
+
+**   end of changes by satyajeet
+
+*    ls_options-fieldname = 'STATUS_COMMON'.
+*    ls_options-low = 'E0044Y0000022'.
+*    ls_options-sign = 'I'.
+*    ls_options-option = 'EQ'.
+*    APPEND ls_options TO lt_table.
+
+*        BOC by MH_JAITHERA for S/4 Migration (STATUS_COMMOM not available in search query)
+**        ls_options-fieldname = 'STATUS_COMMON'.
+**        ls_options-low = 'E0046Y0000022'.
+        ls_options-fieldname = 'STAT_LIFECYCLE'.
+        ls_options-low = '466'.
+        ls_options-sign = 'I'.
+        ls_options-option = 'EQ'.
+        APPEND ls_options TO lt_table.
+**
+**        ls_options-fieldname = 'STATUS_COMMON'.
+**        ls_options-low = 'E0047Y0000022'.
+        ls_options-fieldname = 'STAT_LIFECYCLE'.
+        ls_options-low = '467'.
+        ls_options-sign = 'I'.
+        ls_options-option = 'EQ'.
+        APPEND ls_options TO lt_table.
+*        EOC by MH_JAITHERA for S/4 Migration (STATUS_COMMOM not available in search query)
+
+** Start of comment by E0024805 on 17 June 2014 for SBCK906197
+*    ls_options-fieldname = 'STATUS_COMMON'.
+*    ls_options-low = 'E0076Y0000022'.
+*    ls_options-sign = 'I'.
+*    ls_options-option = 'EQ'.
+*    APPEND ls_options TO lt_table.
+
+*        BOC by MH_JAITHERA for S/4 Migration (STATUS_COMMOM not available in search query)
+**        ls_options-fieldname = 'STATUS_COMMON'.
+**        ls_options-low = 'E0078Y0000022'.
+        ls_options-fieldname = 'STAT_LIFECYCLE'.
+        ls_options-low = '476'.
+        ls_options-sign = 'I'.
+        ls_options-option = 'EQ'.
+        APPEND ls_options TO lt_table.
+*        EOC by MH_JAITHERA for S/4 Migration (STATUS_COMMOM not available in search query)
+
+
+** End of comment by E0024805 on 17 June 2014 for SBCK906197
+
+*    ls_options-fieldname = 'STATUS_COMMON'.
+*    ls_options-low = 'E0077Y0000022'.
+*    ls_options-sign = 'I'.
+*    ls_options-option = 'EQ'.
+*    APPEND ls_options TO lt_table.
+
+** Begin of Changes done by E0099007168 on 10/09/2018
+* Allowing the status revision for Est nt requried
+
+*        BOC by MH_JAITHERA for S/4 Migration (STATUS_COMMOM not available in search query)
+*        ls_options-fieldname = 'STATUS_COMMON'.
+*        ls_options-low = 'E0079Y0000022'.
+        ls_options-fieldname = 'STAT_LIFECYCLE'.
+        ls_options-low = '477'.
+        ls_options-sign = 'I'.
+        ls_options-option = 'EQ'.
+        APPEND ls_options TO lt_table.
+*        BOC by MH_JAITHERA for S/4 Migration (STATUS_COMMOM not available in search query)
+** End of Changes done by E0099007168 on 10/09/2018
+
+*** Start of changes for Preliminary NOC - 11 Oct 2017
+        ls_options-fieldname = 'CATEGORY'.
+        ls_options-low = gv_category .
+        ls_options-sign = 'I'.
+        ls_options-option = 'EQ'.
+        APPEND ls_options TO lt_table.
+
+
+*** End of changes for Preliminary NOC - 11 Oct 2017
+
+        ls_options-fieldname = 'PROCESS_TYPE'.
+        ls_options-low = 'YDA5'.
+        ls_options-sign = 'I'.
+        ls_options-option = 'EQ'.
+        APPEND ls_options TO lt_table.
+      ENDIF .
+    ENDIF.
+***  Begin of Changes done by Sunil Balne 06/05/2018
+    IF gv_category EQ 'Y14'(y14)." OR gv_category EQ 'Y11'.
+      ls_options-fieldname = 'PROCESS_TYPE'.
+      ls_options-low = 'YDM3'.
+      ls_options-sign = 'I'.
+      ls_options-option = 'EQ'.
+      APPEND ls_options TO lt_table.
+
+*     BOC by MH_JAITHERA for S/4 Migration(STATUS_COMMON) is not available in search query
+*      ls_options-fieldname = 'STATUS_COMMON'.
+*      ls_options-low = 'E0080Y0000003'.
+      ls_options-fieldname = 'STAT_LIFECYCLE'.
+      ls_options-low = '65'.
+      ls_options-sign = 'I'.
+      ls_options-option = 'EQ'.
+      APPEND ls_options TO lt_table.
+**
+**      ls_options-fieldname = 'STATUS_COMMON'.
+**      ls_options-low = 'E0080Y0000025'.
+      ls_options-fieldname = 'STAT_LIFECYCLE'.
+      ls_options-low = '520'.
+      ls_options-sign = 'I'.
+      ls_options-option = 'EQ'.
+      APPEND ls_options TO lt_table.
+*     EOC by MH_JAITHERA for S/4 Migration(STATUS_COMMON) is not available in search query
+
+
+      ls_options-fieldname = 'STAT_LIFECYCLE'.
+      ls_options-low = '466'.
+      ls_options-sign = 'I'.
+      ls_options-option = 'EQ'.
+      APPEND ls_options TO lt_table.
+**
+**        ls_options-fieldname = 'STATUS_COMMON'.
+**        ls_options-low = 'E0047Y0000022'.
+      ls_options-fieldname = 'STAT_LIFECYCLE'.
+      ls_options-low = '467'.
+      ls_options-sign = 'I'.
+      ls_options-option = 'EQ'.
+      APPEND ls_options TO lt_table.
+
+      ls_options-fieldname = 'STAT_LIFECYCLE'.
+      ls_options-low = '477'.
+      ls_options-sign = 'I'.
+      ls_options-option = 'EQ'.
+      APPEND ls_options TO lt_table.
+
+      IF gv_sub_category EQ 'REV' .
+
+        ls_options-fieldname = 'CATEGORY'.
+        ls_options-low = gv_category .
+        ls_options-sign = 'I'.
+        ls_options-option = 'EQ'.
+        APPEND ls_options TO lt_table.
+
+***      ELSE .
+***        ls_options-fieldname = 'CATEGORY'.
+***        ls_options-low = 'Y10' .
+***        ls_options-sign = 'I'.
+***        ls_options-option = 'EQ'.
+***        APPEND ls_options TO lt_table.
+      ENDIF .
+
+      ls_options-fieldname = 'PROCESS_TYPE'.
+      ls_options-low = 'YDA5'.
+      ls_options-sign = 'I'.
+      ls_options-option = 'EQ'.
+      APPEND ls_options TO lt_table.
+
+*      DELETE lt_table WHERE low EQ 'YBNE' .
+    ENDIF.
+
+***  End of Changes done by Sunil Balne 06/05/2018
+
+    CALL METHOD gr_order_util->search_service_orders
+      EXPORTING
+        it_options = lt_table
+      IMPORTING
+        ev_error   = ev_error
+        et_results = gt_elect_dar
+        er_results = gr_electr_col.
+
+    delete gt_elect_dar where category eq 'Y32' .
+
+** Start of changes by E0024805 on 17 June 2014 for SBCK906197
+    DATA : lr_col_elec   TYPE REF TO if_bol_entity_col.
+    DATA : lr_ent_elec   TYPE REF TO cl_crm_bol_entity.
+    DATA : lr_col_elec_t TYPE REF TO if_bol_entity_col.
+
+    DATA:  lv_cust_guid  TYPE crmt_object_guid.
+
+    DATA: ls_elect_dar   LIKE LINE OF gt_elect_dar.
+*********BOC by MH_SHIVANIM on 14/03/2023 - S/4 HANA CMM Conversion
+*    DATA: lt_elect_dar   TYPE crmst_query_r_srvo_btil_tab.
+    DATA: lt_elect_dar   TYPE zcrmst_query_r_srvo_btil_tab.
+*********EOC by MH_SHIVANIM on 14/03/2023 - S/4 HANA CMM Conversion
+    DATA: ls_current_user_status   TYPE crmt_status_wrk.
+    DATA: ls_current_user_status2   TYPE crmt_status_wrk.
+
+*********BOC by MH_SHIVANIM on 14/03/2023 - S/4 HANA CMM Conversion
+*    DATA: ls_docflow_header    TYPE crmt_portal_docflow_header,
+*          lt_docflow_header_s  TYPE STANDARD TABLE OF crmt_portal_docflow_header,
+*          lt_docflow_header_s2 TYPE STANDARD TABLE OF crmt_portal_docflow_header.
+    DATA: ls_docflow_header    TYPE zwcrmt_portal_docflow_header,
+          lt_docflow_header_s  TYPE STANDARD TABLE OF zwcrmt_portal_docflow_header,
+          lt_docflow_header_s2 TYPE STANDARD TABLE OF zwcrmt_portal_docflow_header.
+*********EOC by MH_SHIVANIM on 14/03/2023 - S/4 HANA CMM Conversion
+    DATA: lv_remove TYPE boolean.
+*********BOC by MH_SHIVANIM on 14/03/2023 - S/4 HANA CMM Conversion
+*    DATA: lt_orderadm_h TYPE STANDARD TABLE OF crmd_orderadm_h,
+    DATA: lt_orderadm_h TYPE STANDARD TABLE OF crms4d_serv_h,
+*********EOC by MH_SHIVANIM on 14/03/2023 - S/4 HANA CMM Conversion
+          ls_orderadm_h LIKE LINE OF lt_orderadm_h.
+
+    IF gv_category EQ 'Y02'(y02).
+
+      READ TABLE gt_elect_dar INTO ls_elect_dar WITH KEY process_type = 'YDA5'.
+      IF sy-subrc = 0.
+
+        lr_col_elec   = gr_electr_col.
+        lt_elect_dar  = gt_elect_dar.
+
+        CHECK lr_col_elec IS BOUND.
+
+        lr_ent_elec = lr_col_elec->get_first( ).
+
+        WHILE lr_ent_elec IS BOUND.
+
+          CLEAR: lv_cust_guid, ls_elect_dar.
+          CALL METHOD lr_ent_elec->if_bol_bo_property_access~get_property_as_value
+            EXPORTING
+              iv_attr_name = 'GUID'
+            IMPORTING
+              ev_result    = lv_cust_guid.
+
+          CLEAR:ls_current_user_status.
+          CALL FUNCTION 'CRM_STATUS_READ_OW'
+            EXPORTING
+              iv_guid                = lv_cust_guid
+              iv_only_active         = 'X'
+            IMPORTING
+              es_current_user_status = ls_current_user_status.
+
+          REFRESH: lt_docflow_header_s,lt_docflow_header_s2 .
+          CALL FUNCTION 'ZWFM_CRM_SERVICE_DOC_FLOW_READ'
+            EXPORTING
+              iv_guid             = lv_cust_guid
+            TABLES
+              et_docflow_header_s = lt_docflow_header_s.
+          lv_remove = abap_false.
+          CALL FUNCTION 'ZWFM_CRM_SRV_DOC_FLOW_READ2'
+            EXPORTING
+              iv_guid             = lv_cust_guid
+            TABLES
+              et_docflow_header_s = lt_docflow_header_s2.
+
+          DELETE lt_docflow_header_s2 WHERE process_type <> 'YDA5'.
+          SORT lt_docflow_header_s2 BY object_id DESCENDING process_type created_by.
+          CLEAR: ls_current_user_status2 .
+          READ TABLE lt_docflow_header_s2 INTO DATA(ls_dummy) INDEX 1 .
+          IF sy-subrc = 0 .
+            CALL FUNCTION 'CRM_STATUS_READ_OW'
+              EXPORTING
+                iv_guid                = ls_dummy-object_guid
+                iv_only_active         = 'X'
+              IMPORTING
+                es_current_user_status = ls_current_user_status2.
+
+            IF ls_current_user_status2-status <> 'E0043' .
+              CALL METHOD lr_col_elec->remove
+                EXPORTING
+                  iv_entity = lr_ent_elec.
+              DELETE lt_elect_dar WHERE guid  = lv_cust_guid.
+              lv_remove = abap_true.
+            ENDIF .
+          ENDIF .
+
+
+          DELETE lt_docflow_header_s WHERE process_type <> 'YLVI'.
+          SORT lt_docflow_header_s BY object_id DESCENDING process_type created_by.
+          CLEAR: ls_docflow_header.
+
+
+          READ TABLE gt_elect_dar INTO ls_elect_dar WITH KEY guid = lv_cust_guid.
+          IF sy-subrc = 0 AND ls_elect_dar-process_type = 'YDA5' AND ls_current_user_status-status = 'E0078' .
+            READ TABLE lt_docflow_header_s INTO ls_docflow_header INDEX 1.
+            IF sy-subrc = 0.
+              CLEAR:ls_current_user_status.
+              CALL FUNCTION 'CRM_STATUS_READ_OW'
+                EXPORTING
+                  iv_guid                = ls_docflow_header-object_guid
+                  iv_only_active         = 'X'
+                IMPORTING
+                  es_current_user_status = ls_current_user_status.
+
+              IF ls_current_user_status-status <> 'E0014'.  " If LV Inspection status is not 'Send for Revision Customer Action'
+                CALL METHOD lr_col_elec->remove
+                  EXPORTING
+                    iv_entity = lr_ent_elec.
+                DELETE lt_elect_dar WHERE guid  = lv_cust_guid.
+                lv_remove = abap_true.
+              ELSE.
+                REFRESH lt_orderadm_h.
+                CLEAR ls_orderadm_h.
+*********BOC by MH_SHIVANIM on 14/03/2023 - S/4 HANA CMM Conversion
+                DATA s_objid    TYPE dpicb_range_srv_ordr_tab. """added by MH_HARIT for TR syntax error
+*                SELECT * FROM crmd_orderadm_h INTO TABLE lt_orderadm_h WHERE zzfld00005k = ls_elect_dar-zzfld00005k AND
+                SELECT * FROM crms4d_serv_h INTO TABLE lt_orderadm_h WHERE zzd_zzfld00005k_srh = ls_elect_dar-zzd_zzfld00005k_srh AND
+*********EOC by MH_SHIVANIM on 14/03/2023 - S/4 HANA CMM Conversion
+                                                                             process_type = 'YDA5' AND object_id IN s_objid.
+                IF sy-subrc = 0.
+* BOC by Vasu on 12.12.22 - eligible YDA5 application is removed if the latest YDA5 was rejected.
+                  DATA: ls_yda5_user_status   TYPE crmt_status_wrk.
+                  LOOP AT lt_orderadm_h INTO ls_orderadm_h.
+                    CALL FUNCTION 'CRM_STATUS_READ_OW'
+                      EXPORTING
+                        iv_guid                = ls_orderadm_h-header_guid
+                        iv_only_active         = 'X'
+                      IMPORTING
+                        es_current_user_status = ls_yda5_user_status.
+                    IF ls_yda5_user_status-status = 'E0043'. "Application Rejected
+                      DELETE lt_orderadm_h WHERE header_guid = ls_orderadm_h-header_guid.
+                    ENDIF.
+                    CLEAR: ls_yda5_user_status, ls_orderadm_h.
+                  ENDLOOP.
+
+                  IF lt_orderadm_h[] IS NOT INITIAL.
+* EOC by Vasu on 12.12.22 - eligible YDA5 application is removed if the latest YDA5 was rejected.
+*********BOC by MH_SHIVANIM on 14/03/2023 - S/4 HANA CMM Conversion
+*                  SORT lt_orderadm_h BY created_at DESCENDING.
+                    SORT lt_orderadm_h BY created_at_h DESCENDING.
+*********EOC by MH_SHIVANIM on 14/03/2023 - S/4 HANA CMM Conversion
+                    READ TABLE lt_orderadm_h INTO ls_orderadm_h INDEX 1.
+*********BOC by MH_SHIVANIM on 14/03/2023 - S/4 HANA CMM Conversion
+*                  IF lv_cust_guid <> ls_orderadm_h-guid.
+                    IF lv_cust_guid <> ls_orderadm_h-header_guid.
+*********EOC by MH_SHIVANIM on 14/03/2023 - S/4 HANA CMM Conversion
+                      CALL METHOD lr_col_elec->remove
+                        EXPORTING
+                          iv_entity = lr_ent_elec.
+                      DELETE lt_elect_dar WHERE guid  = lv_cust_guid.
+                      lv_remove = abap_true.
+
+                    ENDIF.
+                  ENDIF.
+                ENDIF.
+              ENDIF.
+            ELSE.
+              CALL METHOD lr_col_elec->remove
+                EXPORTING
+                  iv_entity = lr_ent_elec.
+              DELETE lt_elect_dar WHERE guid  = lv_cust_guid.
+              lv_remove = abap_true.
+            ENDIF.
+          ENDIF.
+
+          IF lv_remove = abap_false.
+            lr_ent_elec = lr_col_elec->get_next( ).
+          ELSE.
+            lr_ent_elec = lr_col_elec->get_current( ).
+          ENDIF.
+
+        ENDWHILE.
+
+        gr_electr_col = lr_col_elec.
+        gt_elect_dar  = lt_elect_dar.
+
+      ENDIF.
+
+    ENDIF.
+
+** End of changes by E0024805 on 17 June 2014 for SBCK906197
+
+*=======================================================================================>
+*Begin of changes done by Sunil Balne to display the YDA3 apllication no on result view based on the YBPE status is "Approved"
+
+    IF gv_category EQ 'Y14'(y14).
+*********BOC by MH_SHIVANIM on 14/03/2023 - S/4 HANA CMM Conversion
+*      DATA: ls_docflow_p_header TYPE crmt_portal_docflow_header,
+*            lt_docflow_p_header TYPE STANDARD TABLE OF crmt_portal_docflow_header.
+      DATA: ls_docflow_p_header TYPE zwcrmt_portal_docflow_header,
+            lt_docflow_p_header TYPE STANDARD TABLE OF zwcrmt_portal_docflow_header.
+*********EOC by MH_SHIVANIM on 14/03/2023 - S/4 HANA CMM Conversion
+      READ TABLE gt_elect_dar INTO ls_elect_dar WITH KEY process_type = 'YDM3'.
+      IF sy-subrc = 0.
+        lr_col_elec   = gr_electr_col.
+        lt_elect_dar  = gt_elect_dar.
+
+        CHECK lr_col_elec IS BOUND.
+        lr_ent_elec = lr_col_elec->get_first( ).
+        WHILE lr_ent_elec IS BOUND.
+          CLEAR: lv_cust_guid, ls_elect_dar.
+          CALL METHOD lr_ent_elec->if_bol_bo_property_access~get_property_as_value
+            EXPORTING
+              iv_attr_name = 'GUID'
+            IMPORTING
+              ev_result    = lv_cust_guid.
+
+          REFRESH: lt_docflow_p_header.
+
+          IF lv_cust_guid IS NOT INITIAL.
+            CALL FUNCTION 'ZWFM_CRM_SERVICE_DOC_FLOW_READ'
+              EXPORTING
+                iv_guid             = lv_cust_guid
+              TABLES
+                et_docflow_header_p = lt_docflow_p_header.
+            IF lt_docflow_p_header IS NOT INITIAL.
+              DELETE lt_docflow_p_header WHERE process_type <> 'YBPE'.
+              CLEAR: ls_docflow_p_header.
+
+              READ TABLE gt_elect_dar INTO ls_elect_dar WITH KEY guid = lv_cust_guid.
+              IF sy-subrc = 0 AND ls_elect_dar-process_type = 'YDM3'.
+                READ TABLE lt_docflow_p_header INTO ls_docflow_p_header INDEX 1.
+                IF sy-subrc = 0.
+                  CLEAR:ls_current_user_status.
+                  CALL FUNCTION 'CRM_STATUS_READ_OW'
+                    EXPORTING
+                      iv_guid                = ls_docflow_p_header-object_guid
+                      iv_only_active         = 'X'
+                    IMPORTING
+                      es_current_user_status = ls_current_user_status.
+
+                  IF ls_current_user_status-status <> 'E0080'. "Approved
+                    CALL METHOD lr_col_elec->remove
+                      EXPORTING
+                        iv_entity = lr_ent_elec.
+                    DELETE lt_elect_dar WHERE guid  = lv_cust_guid.
+                    lv_remove = abap_true.
+                  ENDIF.
+                ENDIF.
+              ENDIF.
+            ENDIF.
+          ENDIF.
+          lr_ent_elec = lr_col_elec->get_next( ).
+        ENDWHILE.
+        gr_electr_col = lr_col_elec.
+        gt_elect_dar  = lt_elect_dar.
+      ENDIF."sy-subrc
+    ENDIF.
+
+
+*End of Changes done by Sunil Balne to  display the YDA3 apllication no on result view based on the YBPE status is "Approved"
+*========================================================================================>
+
+    lr_col = gr_electr_col.
+
+    CHECK lr_col IS BOUND.
+
+    CALL METHOD lr_col->sort
+      EXPORTING
+        iv_attr_name  = 'CREATED_AT'
+        iv_sort_order = if_bol_bo_col=>sort_descending.
+
+*  IF gv_category NE text-y02.
+**Begin of Changes done by Sunil for Category Y39
+    DELETE gt_elect_dar WHERE category EQ 'Y39'.
+
+** End of Changes done by Sunil for Category Y39
+*******BOC – MH_KAUSHIK on 14/03/2023 – S/4 HANA CMM Conversion:
+    IF gt_elect_dar[] IS NOT INITIAL.
+*      SELECT  guid
+*             object_id
+*             process_type
+*             created_at
+*             changed_at
+*            zzfld000007
+*             zzdzzfld000023
+*             zzfld0000ej
+*             zzfld00000h
+*             zzfld00001z
+*             zzfld00005k  FROM crmd_orderadm_h INTO TABLE lt_noc FOR ALL ENTRIES IN gt_elect_dar
+*         WHERE guid = gt_elect_dar-guid AND process_type = gt_elect_dar-process_type.
+
+      SELECT  header_guid
+             object_id
+             process_type
+             posting_date
+             created_at_h
+             changed_at_h
+             zzd_zzfld000007_srh
+             zzd_zzfld000023_srh
+             zzd_zzfld0000ej_srh
+             zzd_zzfld00000h_srh
+             zzd_zzfld00001z_srh
+             zzd_zzfld00005k_srh  FROM crms4d_serv_h INTO TABLE lt_noc FOR ALL ENTRIES IN gt_elect_dar
+         WHERE header_guid = gt_elect_dar-guid AND process_type = gt_elect_dar-process_type.
+
+    ENDIF.
+*  ENDIF.
+
+
+**  sort by applied date about community code, plot no, project number and application no.
+    SORT lt_noc BY zzfld000007 zzfld000023 zzfld0000ej zzfld00005k created_at  DESCENDING.
+
+    DELETE ADJACENT DUPLICATES FROM lt_noc COMPARING zzfld000007 zzfld000023 zzfld0000ej zzfld00005k.
+
+*******EOC – MH_KAUSHIK on 14/03/2023 - S/4 HANA CMM Conversion:
+**** Code to remove old approved NOC from search creatiera
+    REFRESH lt_noc1.
+    LOOP AT lt_noc INTO wa_noc.
+
+
+
+      approved_date = wa_noc-changed_at.
+      approved_date = approved_date+0(8).
+
+      DATA lv TYPE dd01v-datatype.
+      CALL FUNCTION 'NUMERIC_CHECK'
+        EXPORTING
+          string_in = wa_noc-zzfld00000h
+        IMPORTING
+*         STRING_OUT =
+          htype     = lv.
+
+      IF lv EQ 'NUMC' AND ( wa_noc-zzfld00000h EQ 01 OR wa_noc-zzfld00001z GE '5000' ).
+        CALL FUNCTION 'CCM_GO_BACK_MONTHS'
+          EXPORTING
+            currdate   = sy-datum
+            backmonths = '12'
+          IMPORTING
+            newdate    = check_date.
+      ELSE.
+        CALL FUNCTION 'CCM_GO_BACK_MONTHS'
+          EXPORTING
+            currdate   = sy-datum
+            backmonths = '12'
+          IMPORTING
+            newdate    = check_date.
+      ENDIF.
+      DATA lv_live_date TYPE datum .
+
+      SELECT  * FROM tvarvc   UP TO 1 ROWS INTO @DATA(ls_tvarvc)  WHERE  name = 'ZNEW_CONN_DATE'.
+      ENDSELECT.
+      IF ls_tvarvc-low IS NOT INITIAL .
+        lv_live_date = ls_tvarvc-low .
+        APPEND ls_options TO lt_table.
+      ENDIF .
+
+*      lv_live_date = '20251031' .
+      IF wa_noc-process_type EQ 'YBNE' .
+        IF wa_noc-posting_date GT lv_live_date .
+          CONTINUE .
+        ENDIF .
+      ENDIF .
+
+
+** Start of changes by E0024805 on 13 Aug 2014 for SBCK906410
+      IF gv_category EQ 'Y02'(y02).
+        APPEND wa_noc TO lt_noc1 .
+        CLEAR wa_noc.
+      ELSE.
+** end of changes by E0024805 on 13 Aug 2014 for SBCK906410
+        IF approved_date GE check_date .
+          APPEND wa_noc TO lt_noc1 .
+          CLEAR wa_noc.
+        ENDIF.
+** Start of changes by E0024805 on 13 Aug 2014 for SBCK906410
+      ENDIF.
+** end of changes by E0024805 on 13 Aug 2014 for SBCK906410
+
+
+
+    ENDLOOP.
+
+    REFRESH lt_noc.
+
+    lt_noc[] =  lt_noc1[].
+
+
+
+**** Get the Iterator from the collection
+    lr_iterator = lr_col->get_iterator( ).
+
+*** Create Instance
+    CREATE OBJECT lr_col2.
+
+
+**** After Calculation , get the correct entries and rebuild new collection
+    LOOP AT lt_noc ASSIGNING <fs_noc>.
+
+      CALL METHOD lr_iterator->find_by_property
+        EXPORTING
+          iv_attr_name = 'GUID'
+          iv_value     = <fs_noc>-guid
+        RECEIVING
+          rv_result    = lr_access.
+
+      CALL METHOD lr_col2->if_bol_bo_col~add
+        EXPORTING
+          iv_entity = lr_access.
+
+    ENDLOOP.
+
+*** Transfer the Rebuilded collection to global collection
+    gr_electr_col = lr_col2.
+
+    lr_col = gr_electr_col.
+
+
+**** Rebuild the  Global Table to avoid disturbances
+    CHECK lr_col IS BOUND.
+
+*** Clear the Global and rebuild the table for correct display
+    REFRESH gt_elect_dar.
+
+    CALL METHOD lr_col->sort
+      EXPORTING
+        iv_attr_name  = 'CREATED_AT'
+        iv_sort_order = if_bol_bo_col=>sort_descending.
+
+
+    lr_entity = lr_col->get_first( ).
+
+    CHECK   lr_entity IS BOUND.
+
+
+
+**** Rebuild the table
+    WHILE  lr_entity IS BOUND.
+
+      CALL METHOD lr_entity->if_bol_bo_property_access~get_properties
+        IMPORTING
+          es_attributes = ls_order.
+
+      IF gs_electr_se-low IS NOT INITIAL AND gv_category = 'Y02' .
+        DATA: ls_current_status   TYPE crmt_status_wrk.
+*********BOC by MH_SHIVANIM on 14/03/2023 - S/4 HANA CMM Conversion
+*        SELECT SINGLE * FROM crmd_orderadm_h INTO @DATA(ls_ord) WHERE guid = @ls_order-guid .
+        SELECT SINGLE * FROM crms4d_serv_h INTO @DATA(ls_ord) WHERE header_guid = @ls_order-guid .
+        IF sy-subrc = 0 .
+*          SELECT  a~guid,
+*            a~object_id,
+*            a~process_type,
+*            a~created_at,
+*            a~changed_at,
+*            a~zzfld000007,
+*            a~zzfld000023,
+*            a~zzfld0000ej,
+*            a~zzfld00000h,
+*            a~zzfld00001z,
+*            a~zzfld00005k,
+*            b~category
+*            FROM crmd_orderadm_h AS a INNER JOIN crmd_activity_h AS b ON a~guid = b~guid
+*           INTO TABLE @DATA(lt_noc3)
+*            WHERE  process_type = 'YDA5' AND
+*           zzfld000007 = @ls_ord-zzfld000007 AND zzfld000023 = @ls_ord-zzfld000023 AND zzfld0000ej = @ls_ord-zzfld0000ej  .
+
+*          SELECT  a~header_guid,
+*                      a~object_id,
+*                      a~process_type,
+*                      a~created_at_h,
+*                      a~changed_at_h,
+*                      a~zzd_zzfld000007_srh,
+*                      a~zzd_zzfld000023_srh,
+*                      a~zzd_zzfld0000ej_srh,
+*                      a~zzd_zzfld00000h_srh,
+*                      a~zzd_zzfld00001z_srh,
+*                      a~zzd_zzfld00005k_srh,
+*                      b~category
+*                      FROM crms4d_serv_h AS a INNER JOIN crms4d_actv_h AS b ON a~header_guid = b~header_guid
+*                     INTO TABLE @DATA(lt_noc3)
+*                      WHERE  a~process_type = 'YDA5'
+*                  AND zzd_zzfld000007_srh = @ls_ord-zzd_zzfld000007_srh
+*                  AND zzd_zzfld000023_srh = @ls_ord-zzd_zzfld000023_srh
+*                  AND zzd_zzfld0000ej_srh = @ls_ord-zzd_zzfld0000ej_srh  .
+
+          SELECT  a~header_guid,
+                      a~object_id,
+                      a~category,
+                      a~process_type,
+                      a~created_at_h,
+                      a~changed_at_h,
+                      a~zzd_zzfld000007_srh,
+                      a~zzd_zzfld000023_srh,
+                      a~zzd_zzfld0000ej_srh,
+                      a~zzd_zzfld00000h_srh,
+                      a~zzd_zzfld00001z_srh,
+                      a~zzd_zzfld00005k_srh
+                      FROM crms4d_serv_h AS a
+*            AS a INNER JOIN crms4d_actv_h AS b ON a~header_guid = b~header_guid
+                      WHERE a~process_type = 'YDA5'
+                      AND a~zzd_zzfld000007_srh = @ls_ord-zzd_zzfld000007_srh
+                      AND a~zzd_zzfld000023_srh = @ls_ord-zzd_zzfld000023_srh
+                      AND a~zzd_zzfld0000ej_srh = @ls_ord-zzd_zzfld0000ej_srh
+                      AND a~object_id IN @s_objid ""added by MH_HARIT for TR syntax error
+            INTO TABLE @DATA(lt_noc3).
+
+
+*          SORT lt_noc3 BY created_at DESCENDING .
+          SORT lt_noc3 BY created_at_h DESCENDING .
+          DELETE lt_noc3 WHERE category EQ 'Y14' . "Added by – MH_JAITHERA on 14/06/2023 – S/4 HANA CMM Conversion: Retrofit Change
+*******BOC – MH_JAITHERA on 14/04/2023 – S/4 HANA CMM : Retrofit changes
+*********EOC by MH_SHIVANIM on 14/03/2023 - S/4 HANA CMM Conversion
+**          LOOP AT lt_noc3 INTO DATA(ls_noc3) WHERE category NE 'Y14' ."WHERE category = 'Y14'  .
+**            CALL FUNCTION 'CRM_STATUS_READ_OW'
+**              EXPORTING
+***********BOC by MH_SHIVANIM on 14/03/2023 - S/4 HANA CMM Conversion
+***               iv_guid                = ls_noc3-guid
+**                iv_guid                = ls_noc3-header_guid
+***********EOC by MH_SHIVANIM on 14/03/2023 - S/4 HANA CMM Conversion
+**                iv_only_active         = 'X'
+**              IMPORTING
+**                es_current_user_status = ls_current_status.
+**            IF ls_current_status-status <> 'E0043' .
+**              EXIT .
+**            ELSE .
+**              CLEAR ls_noc3 .
+**            ENDIF .
+**          ENDLOOP .
+*******EOC – MH_JAITHERA on 14/04/2023 – S/4 HANA CMM : Retrofit changes
+
+*          IF ls_noc3 IS NOT INITIAL .
+*********BOC by MH_SHIVANIM on 14/03/2023 - S/4 HANA CMM Conversion
+*            ls_order-zzfld00005k =  ls_noc3-zzfld00005k .
+*            ls_order-zzd_zzfld00005k_srh =  ls_noc3-zzd_zzfld00005k_srh .
+*********EOC by MH_SHIVANIM on 14/03/2023 - S/4 HANA CMM Conversion
+*          ENDIF .
+*        LOOP AT lt_noc3 INTO DATA(ls_noc3) WHERE category NE 'Y14'. "WHERE category = 'Y14'  . "Commented the loop by Vasu for Search with BNOC for Revision issue - 17.10.2022
+*          CALL FUNCTION 'CRM_STATUS_READ_OW'
+*            EXPORTING
+*              iv_guid                = ls_noc3-guid
+*              iv_only_active         = 'X'
+*            IMPORTING
+*              es_current_user_status = ls_current_status.
+*          IF ls_current_status-status <> 'E0043' .
+*            EXIT .
+*          ELSE .
+*            CLEAR ls_noc3 .
+*          ENDIF .
+*        ENDLOOP .
+
+*       BOC by Vasu - Search with BNOC for Revision - 17.10.2022
+          DATA: lt_docflow_head_p TYPE STANDARD TABLE OF zwcrmt_portal_docflow_header,
+                ls_docflow_head_p TYPE zwcrmt_portal_docflow_header.
+          DATA(lt_yda5)       = lt_noc3[].
+          DATA(lt_yda5_final) = lt_yda5[].
+          REFRESH lt_yda5_final.
+          DELETE lt_yda5 WHERE category EQ 'Y02'.     "YDA5 applications other than Revision
+
+          DATA(lt_yda5_y02)       = lt_noc3[].
+          DATA(lt_yda5_y02_final) = lt_yda5_y02[].
+          REFRESH lt_yda5_y02_final.
+          DELETE lt_yda5_y02 WHERE category NE 'Y02'. " Revision YDA5 applications
+
+          IF lt_yda5_y02[] IS NOT INITIAL.  "First filter with Revision YDA5 applications for output.
+            LOOP AT lt_yda5_y02 INTO DATA(ls_yda5_y02).
+              CLEAR ls_order-zzd_zzfld00005k_srh.
+              DATA(ls_yda5_y02_loc) = ls_yda5_y02.
+              lv_count = 0.   "Maintain the counter variable to avoid the infinite loop if any issues with data.
+              REFRESH lt_docflow_head_p.
+              CALL FUNCTION 'ZWFM_CRM_SERVICE_DOC_FLOW_READ'
+                EXPORTING
+                  iv_guid             = ls_yda5_y02-header_guid
+                TABLES
+                  et_docflow_header_p = lt_docflow_head_p.
+
+              DELETE lt_docflow_head_p WHERE process_type NE 'YDA5'.
+
+              IF lt_docflow_head_p[] IS NOT INITIAL.
+                lv_count = lv_count + 1.
+                SORT lt_docflow_head_p BY created_date DESCENDING.
+                CLEAR ls_docflow_head_p.
+                READ TABLE lt_docflow_head_p INTO ls_docflow_head_p INDEX 1.
+
+*              SELECT  a~guid,        a~object_id,   a~process_type, a~created_at,
+*                      a~changed_at,  a~zzfld000007, a~zzfld000023,  a~zzfld0000ej,
+*                      a~zzfld00000h, a~zzfld00001z, a~zzfld00005k,  b~category
+*                      FROM crmd_orderadm_h AS a INNER JOIN crmd_activity_h AS b ON a~guid = b~guid
+*                      INTO TABLE @DATA(lt_yda5_p) WHERE  a~guid = @ls_docflow_head_p-object_guid AND process_type = 'YDA5'.
+*****BOC – MH_Arnab(Kapatil) – S/4 HANA CMM Conversion****
+*                SELECT SINGLE category FROM crmd_activity_h INTO @DATA(lv_mast_yda5_cate) WHERE guid = @ls_docflow_head_p-object_guid.
+                SELECT SINGLE category FROM crms4d_actv_h INTO @DATA(lv_mast_yda5_cate) WHERE header_guid = @ls_docflow_head_p-object_guid
+                    AND object_id IN @s_objid. "Added by MH_JAITHERA to avoid ATC error
+*****BOC – MH_Arnab(Kapatil) – S/4 HANA CMM Conversion****
+*              READ TABLE lt_yda5_p INTO DATA(ls_yda5_p) INDEX 1.
+*              IF ls_yda5_p-category NE 'Y02'.
+                IF lv_mast_yda5_cate NE 'Y02'.     "Check if master yda5 document is still revision (Y02) or not - if not
+                  DATA(lv_eligible) = check_yda5_rev_eligible( iv_guid = ls_yda5_y02-header_guid ).
+                  IF lv_eligible = abap_true.
+                    ls_yda5_y02-category = lv_mast_yda5_cate. "Replace the category with category of the parent YDA5 application
+                    APPEND ls_yda5_y02 TO lt_yda5_y02_final.
+                    EXIT. "Added by – MH_JAITHERA on 14/06/2023 – S/4 HANA CMM Conversion: Retrofit Change
+                  ENDIF.
+                ELSEIF lv_mast_yda5_cate EQ 'Y02'.   "if yes - Get the previous document of the partent YDA5 until find the YDA5 application other than revision.
+
+                  WHILE ( lv_mast_yda5_cate EQ 'Y02' ).
+
+                    REFRESH lt_docflow_head_p.
+
+                    CALL FUNCTION 'ZWFM_CRM_SERVICE_DOC_FLOW_READ'
+                      EXPORTING
+                        iv_guid             = ls_docflow_head_p-object_guid
+                      TABLES
+                        et_docflow_header_p = lt_docflow_head_p.
+
+                    DELETE lt_docflow_head_p WHERE process_type NE 'YDA5'.
+
+                    IF lt_docflow_head_p[] IS NOT INITIAL.
+                      SORT lt_docflow_head_p BY created_date DESCENDING.
+                      CLEAR ls_docflow_head_p.
+                      READ TABLE lt_docflow_head_p INTO ls_docflow_head_p INDEX 1.
+*                      *****BOC – MH_Arnab(Kapatil) – S/4 HANA CMM Conversion****
+*                      SELECT SINGLE category FROM crmd_activity_h INTO lv_mast_yda5_cate WHERE guid = ls_docflow_head_p-object_guid.
+                      SELECT SINGLE category FROM crms4d_actv_h INTO lv_mast_yda5_cate WHERE header_guid = ls_docflow_head_p-object_guid
+                        AND object_id IN s_objid. "Added by MH_JAITHERA to avoid ATC error
+*                        *****EOC – MH_Arnab(Kapatil) – S/4 HANA CMM Conversion****
+                      IF lv_mast_yda5_cate NE 'Y02'.
+                        CLEAR: ls_docflow_head_p, lv_mast_yda5_cate.
+                        lv_eligible = check_yda5_rev_eligible( iv_guid = ls_yda5_y02-header_guid ).
+                        IF lv_eligible = abap_true.
+                          ls_yda5_y02-category = lv_mast_yda5_cate. "Replace the category with category of the parent YDA5 application
+                          APPEND ls_yda5_y02 TO lt_yda5_y02_final.
+                          EXIT. "Added by – MH_JAITHERA on 14/06/2023 – S/4 HANA CMM Conversion: Retrofit Change
+                        ENDIF.
+                      ELSEIF lv_mast_yda5_cate EQ 'Y02'.
+                        lv_count = lv_count + 1.
+                      ENDIF.
+                    ELSE.
+                      CLEAR lv_mast_yda5_cate.
+                    ENDIF.
+
+                    IF lv_count > 20. " Exit from the loop if the count is more than 20 - to avoid infinite loop.
+                      CLEAR lv_mast_yda5_cate.
+                    ENDIF.
+
+                  ENDWHILE.
+
+                ENDIF.
+
+              ENDIF.
+              CLEAR ls_yda5_y02.
+            ENDLOOP.
+*****BOC – MH_JAITHERA on 29.08.2023 – S/4 HANA CMM Conversion - Retrofit3*****
+*            IF lt_yda5_y02_final[] IS NOT INITIAL.
+*              LOOP AT lt_yda5_y02_final INTO DATA(ls_yda5_y02_final).
+*                CLEAR ls_order-zzd_zzfld00005k_srh.
+*                ls_order-zzd_zzfld00005k_srh = ls_yda5_y02_final-zzd_zzfld00005k_srh.
+*                APPEND ls_order TO gt_elect_dar.
+*              ENDLOOP.
+*            ENDIF.
+            IF lt_yda5_y02_final[] IS NOT INITIAL.
+              READ TABLE lt_yda5_y02_final INTO DATA(ls_yda5_y02_final) INDEX 1 .
+              IF sy-subrc = 0 .
+*             LOOP AT lt_yda5_y02_final INTO DATA(ls_yda5_y02_final).
+                CLEAR ls_order-zzd_zzfld00005k_srh.
+                ls_order-zzd_zzfld00005k_srh = ls_yda5_y02_final-zzd_zzfld00005k_srh.
+                APPEND ls_order TO gt_elect_dar.
+                EXIT .
+*             ENDLOOP.
+              ENDIF .
+            ENDIF.
+*****EOC – MH_JAITHERA – S/4 HANA CMM Conversion - Retrofit3*****
+          ENDIF.
+
+*****BOC – MH_JAITHERA on 29.08.2023 – S/4 HANA CMM Conversion - Retrofit3*****
+          IF gt_elect_dar IS INITIAL .
+            IF lt_yda5[] IS NOT INITIAL.
+              LOOP AT lt_yda5 INTO DATA(ls_yda5).
+                DATA(lv_yda5_eligible) = check_yda5_rev_eligible( iv_guid = ls_yda5-header_guid ).
+                IF lv_yda5_eligible EQ abap_true.
+                  APPEND ls_yda5 TO lt_yda5_final.
+                  EXIT.
+                ENDIF.
+                CLEAR ls_yda5.
+              ENDLOOP.
+
+              IF lt_yda5_final[] IS NOT INITIAL.
+                READ TABLE lt_yda5_final INTO DATA(ls_yda5_final) INDEX 1 .
+                IF sy-subrc = 0 .
+*                 LOOP AT lt_yda5_final INTO DATA(ls_yda5_final).
+                  CLEAR ls_order-zzd_zzfld00005k_srh.
+                  ls_order-zzd_zzfld00005k_srh = ls_yda5_final-zzd_zzfld00005k_srh.
+                  APPEND ls_order TO gt_elect_dar.
+                  EXIT .
+*               ENDLOOP.
+                ENDIF .
+              ENDIF.
+            ENDIF.
+          ENDIF .
+*****EOC – MH_JAITHERA – S/4 HANA CMM Conversion - Retrofit3*****
+
+*******BOC – MH_JAITHERA on 14/06/2023 – S/4 HANA CMM Conversion: Retrofit2 Change
+*****Start of commenting – MH_JAITHERA on 29.08.2023 – S/4 HANA CMM Conversion - Retrofit3*****
+*          IF gr_electr_col IS BOUND .
+*            DATA(lv_col_size) = gr_electr_col->size( ) .
+*            DESCRIBE TABLE gt_elect_dar LINES DATA(lv_lines) .
+*
+*            IF lv_lines > lv_col_size .
+*              IF lr_access IS BOUND .
+*                WHILE lv_lines NE lv_col_size   .
+*                  CALL METHOD gr_electr_col->if_bol_bo_col~add
+*                    EXPORTING
+*                      iv_entity = lr_access.
+*                  lv_col_size = lv_col_size + 1 .
+*                ENDWHILE .
+*              ENDIF .
+*            ENDIF .
+*          ENDIF .
+*****EOC – MH_JAITHERA – S/4 HANA CMM Conversion - Retrofit3*****
+*******EOC – MH_JAITHERA on 14/06/2023 – S/4 HANA CMM Conversion: Retrofit2 Change
+
+*        LOOP AT lt_noc3 INTO DATA(ls_noc3).
+*
+*          CLEAR ls_current_status.
+*          CALL FUNCTION 'CRM_STATUS_READ_OW'
+*            EXPORTING
+*              iv_guid                = ls_noc3-guid
+*              iv_only_active         = 'X'
+*            IMPORTING
+*              es_current_user_status = ls_current_status.
+*
+*          CLEAR ls_order-zzfld00005k.
+*
+*          IF ls_current_status-status = 'E0043'.        "Application Rejected.
+*            "Continue the iteration to check next latest YDA5.
+*          ELSEIF ls_current_status-status = 'E0046' OR  "Estimate ready for payment
+*                 ls_current_status-status = 'E0047' OR  "Est. Ready for pay/Tech.Clar
+*                 ls_current_status-status = 'E0079'.    "Revision of Est. Not Required
+*            ls_order-zzfld00005k = ls_noc3-zzfld00005k.
+*            APPEND ls_order TO gt_elect_dar.
+*
+*          ELSEIF ls_current_status-status = 'E0078'.    "Tech. Clarification Required
+*            CALL FUNCTION 'ZWFM_CRM_SERVICE_DOC_FLOW_READ'
+*              EXPORTING
+*                iv_guid             = lv_cust_guid
+*              TABLES
+*                et_docflow_header_s = lt_docflow_header_s.
+*
+*            DELETE lt_docflow_header_s WHERE process_type <> 'YLVI'.
+*            SORT lt_docflow_header_s BY object_id DESCENDING process_type created_by.
+*            CLEAR: ls_docflow_header.
+*
+*            READ TABLE lt_docflow_header_s INTO ls_docflow_header INDEX 1.
+*            IF sy-subrc = 0.
+*              CLEAR ls_current_user_status.
+*              CALL FUNCTION 'CRM_STATUS_READ_OW'
+*                EXPORTING
+*                  iv_guid                = ls_docflow_header-object_guid
+*                  iv_only_active         = 'X'
+*                IMPORTING
+*                  es_current_user_status = ls_current_user_status.
+*
+*              IF ls_current_user_status-status = 'E0014'.     "Send for Revision Customer Action
+*                ls_order-zzfld00005k = ls_noc3-zzfld00005k.
+*                APPEND ls_order TO gt_elect_dar.
+*              ENDIF.
+*            ENDIF.
+*
+*          ENDIF.
+*
+*        ENDLOOP.
+*       EOC by Vasu - Search with BNOC for Revision - 17.10.2022
+
+*        IF ls_noc3 IS NOT INITIAL .
+*          ls_order-zzfld00005k =  ls_noc3-zzfld00005k .
+*        ENDIF .
+        ENDIF .
+      ELSE.
+        APPEND ls_order TO gt_elect_dar.
+      ENDIF .
+      lr_entity = lr_col->get_next( ).
+    ENDWHILE.
+  ENDMETHOD.
