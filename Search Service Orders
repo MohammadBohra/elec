@@ -1,0 +1,173 @@
+METHOD search_service_orders.
+*  BuilHeaderSearch
+  DATA: lr_query TYPE REF TO cl_crm_bol_dquery_service.
+  DATA : lr_entity TYPE REF TO cl_crm_bol_entity.
+  DATA : lv_name TYPE crmt_ext_obj_name.
+  DATA : lv_id TYPE string.
+  DATA : lr_cx_root TYPE REF TO cx_root.
+  DATA : ls_result TYPE crmst_query_r_srvo_btil.
+  DATA : lt_table TYPE genilt_selection_parameter_tab.
+  DATA : lr_table TYPE REF TO if_bol_bo_col.
+  DATA : lt_options TYPE sqf_se16_select_options.
+  DATA : lt_options2 TYPE sqf_se16_select_options.
+  DATA : ls_options TYPE sqf_se16_select_option.
+
+  FIELD-SYMBOLS : <fs_options> TYPE sqf_se16_select_option.
+*  * Execute query and receive result
+  DATA: lr_result TYPE REF TO if_bol_entity_col.
+
+  IF gr_cl_core IS NOT  BOUND.
+    me->start_up( ).
+  ENDIF.
+  gr_cl_core->load_component('BT').
+
+*  IF sy-uname EQ 'MH_JAITHERA'.
+*    lv_name = 'BTQSrvOrdMon'.
+*  ELSE.
+    lv_name = 'BTQSrvOrd'.
+*  ENDIF.
+
+
+  TRY.
+      lr_query = cl_crm_bol_dquery_service=>get_instance( lv_name ).
+*  * Set a search criterion
+
+      lr_table =  lr_query->get_selection_params( ).
+
+      CALL METHOD lr_query->if_bol_bo_property_access~set_property
+        EXPORTING
+          iv_attr_name = 'MAX_HITS'
+*         iv_value     = '100'."Commented by raju Prasad on 20th aug 2019
+          iv_value     = '999'.
+
+
+      lt_options[] = it_options[].
+      lt_options2[] = lt_options.
+
+      DELETE lt_options2 WHERE fieldname NE 'PROCESS_TYPE'(pr0).
+
+      LOOP AT lt_options2 ASSIGNING <fs_options>.
+        CLEAR : ls_options.
+
+        IF <fs_options>-low EQ 'YLVI'(lvi) OR <fs_options>-low EQ 'YHVI'(hvi)
+          OR <fs_options>-low EQ 'YBNE'(bne) OR <fs_options>-low EQ 'YBNW'(bnw)
+          OR <fs_options>-low EQ 'YDM1'(dm1) OR <fs_options>-low EQ 'YDM2'(dm2)
+*** Start of chnages for DM BPS Project 27.09.2017
+          OR  <fs_options>-low EQ 'YDM3'  OR  <fs_options>-low EQ 'YBPE'
+*** End of chnages for DM BPS Project 27.09.2017
+**** Start change of raju fit out 01-10-2019
+*          OR  <fs_options>-low EQ 'YAPE'
+**** End change of raju fit out 01-10-2019
+          OR <fs_options>-low EQ 'YDA6'(da6) OR <fs_options>-low EQ 'YDA5'(da5)
+          OR <fs_options>-low EQ 'YDA1'(da1).
+          CONTINUE.
+        ENDIF.
+
+        CASE <fs_options>-low.
+          WHEN 'YDA6'(yd6)." New Connection process
+            ls_options-sign = 'I'.
+          WHEN 'YDA5'(yd5). " New Fit Out
+            ls_options-sign = 'I'.
+          WHEN OTHERS.
+            ls_options-sign = 'E'.
+        ENDCASE.
+
+        ls_options-low = abap_true.
+        ls_options-option = 'EQ'.
+        ls_options-fieldname = 'ZZD_ZZFLD0000HV_SRH'. "S/4 Change
+
+        APPEND ls_options TO lt_options.
+      ENDLOOP.
+
+
+      LOOP AT lt_options ASSIGNING <fs_options>.
+
+        IF <fs_options>-high IS NOT INITIAL.
+          lr_query->add_selection_param( iv_attr_name = <fs_options>-fieldname
+      iv_sign = <fs_options>-sign
+      iv_option = 'BT' "“Greater than
+      iv_low = <fs_options>-low
+      iv_high = <fs_options>-high ).
+        ELSE.
+          IF <fs_options>-sign IS INITIAL .
+            <fs_options>-sign = TEXT-iii.
+          ENDIF.
+
+          IF <fs_options>-option IS INITIAL .
+            <fs_options>-option = TEXT-eqr.
+          ENDIF.
+
+          lr_query->add_selection_param( iv_attr_name = <fs_options>-fieldname
+      iv_sign = <fs_options>-sign
+      iv_option = <fs_options>-option"'EQ' "“Greater than
+      iv_low = <fs_options>-low ).
+*      iv_high = <fs_options>-high ).
+        ENDIF.
+
+      ENDLOOP.
+
+* Execute the query and receive result
+      REFRESH : et_results.
+
+      lr_result = lr_query->get_query_result( ).
+
+      CHECK lr_result IS BOUND.
+
+      lr_entity ?=  lr_result->get_first( ).
+
+      CHECK lr_entity IS BOUND.
+
+      CALL METHOD lr_entity->if_bol_bo_property_access~get_properties
+        IMPORTING
+          es_attributes = ls_result.
+*******BOC – MH_SHIVANIM on 14/03/2023 – S/4 HANA CMM Conversion:
+*      IF ls_result-process_type EQ 'YBPE' AND ls_result-zzfld00006t EQ 'YES'. "if condition added by Vasu for 220355 on 22.9.2022
+      IF ls_result-process_type EQ 'YBPE'(ybp) AND ls_result-zzd_zzfld00006t_srh EQ 'YES'. "if condition added by Vasu for 220355 on 22.9.2022
+*******EOC – MH_SHIVANIM on 14/03/2023 – S/4 HANA CMM Conversion:
+        lr_result->remove( iv_entity = lr_entity ).
+      ELSE.
+
+        ls_result-object_type = 'View'(vie).
+        ls_result-sales_employee_list = 'Edit'(edi).
+        APPEND ls_result TO et_results.
+
+      ENDIF.
+
+      WHILE lr_entity IS BOUND.
+        lr_entity ?=  lr_result->get_next( ).
+
+        CHECK lr_entity IS BOUND.
+
+        CALL METHOD lr_entity->if_bol_bo_property_access~get_properties
+          IMPORTING
+            es_attributes = ls_result.
+*******EOC – MH_SHIVANIM on 14/03/2023 – S/4 HANA CMM Conversion:
+*        IF ls_result-process_type EQ 'YBPE' AND ls_result-zzfld00006t EQ 'YES'. "if condition added by Vasu for 220355 on 22.9.2022
+        IF ls_result-process_type EQ 'YBPE'(ybp) AND ls_result-zzd_zzfld00006t_srh EQ 'YES'. "if condition added by Vasu for 220355 on 22.9.2022
+*******EOC – MH_SHIVANIM on 14/03/2023 – S/4 HANA CMM Conversion:
+          lr_result->remove( iv_entity = lr_entity ).
+        ELSE.
+          ls_result-object_type = 'View'(vie).
+          ls_result-sales_employee_list = 'Edit'(edi).
+
+          APPEND ls_result TO et_results.
+        ENDIF.
+
+      ENDWHILE.
+
+
+      er_results = lr_result.
+
+**** Begin of Changes for Duplicate check on Plot ,Project,Community on 15/01/2020
+      READ TABLE lt_options INTO DATA(ls_cat_options) WITH KEY fieldname = 'CATEGORY'.
+      IF ls_cat_options-low = 'Y32'.
+*        CLEAR:zwcl_crm_new_model=>gr_ele_dup_col.
+        zwcl_crm_new_model=>gr_ele_dup_col = er_results.
+      ENDIF.
+*** End of Changes done by SUnil on 15/01/2020
+    CATCH cx_root INTO lr_cx_root.
+
+      ev_error =  lr_cx_root->get_text( ).
+
+  ENDTRY.
+ENDMETHOD.
