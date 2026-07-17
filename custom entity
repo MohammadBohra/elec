@@ -1,22 +1,37 @@
+DATA(lo_paging) = io_request->get_paging( ).
+
+DATA(lv_page_size) = lo_paging->get_page_size( ).
+DATA(lv_offset)    = lo_paging->get_offset( ).
+
+
 METHOD if_rap_query_provider~select.
+
+  DATA(lo_paging) = io_request->get_paging( ).
+
+  DATA(lv_page_size) = lo_paging->get_page_size( ).
+  DATA(lv_offset)    = lo_paging->get_offset( ).
 
   DATA lt_response TYPE TABLE OF zce_edar_result.
 
-  IF io_request->is_total_numb_of_rec_requested( ).
-    io_response->set_total_number_of_records( 1 ).
-  ENDIF.
-
   APPEND VALUE #(
-    Guid                 = '12345678901234567890123456789012'
-    ObjectId             = '123456'
-    ProcessType          = 'YDA'
-    ProcessTypeTxt       = 'TEST'
-    StatLifecycle        = '0065'
-    StatLifecycleDesc    = 'Approved'
-    SoldToPartyList      = 'Test'
-    ContactPersonList    = 'Test'
-    Currency             = 'AED'
+      Guid                 = '12345678901234567890123456789012'
+      ObjectId             = '12345'
+      ProcessType          = 'YDA5'
+      ProcessTypeTxt       = 'Test'
+      StatLifecycle        = '65'
+      StatLifecycleDesc    = 'Approved'
+      SoldToPartyList      = 'Test'
+      ContactPersonList    = 'Test'
+      NetValue             = '0'
+      Currency             = 'AED'
+      Zzd_Zzfld000007_Srh  = '0617'
   ) TO lt_response.
+
+  IF io_request->is_total_numb_of_rec_requested( ).
+    io_response->set_total_number_of_records(
+      lines( lt_response )
+    ).
+  ENDIF.
 
   io_response->set_data( lt_response ).
 
