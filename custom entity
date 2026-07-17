@@ -120,3 +120,100 @@ METHOD if_rap_query_provider~select.
   io_response->set_data( lt_response ).
 
 ENDMETHOD.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+PUBLIC SECTION.
+
+  METHODS search_edar
+    IMPORTING
+      iv_plot_number TYPE zzd_zzfld000007 OPTIONAL
+    EXPORTING
+      et_result TYPE zcrmst_query_r_srvo_btil_tab.
+
+
+
+
+
+
+
+
+
+
+METHOD search_edar.
+
+  DATA:
+    lo_order_util TYPE REF TO zwcl_order_utility,
+    lt_options    TYPE sqf_se16_select_options,
+    ls_option     TYPE sqf_se16_select_option,
+    lv_error      TYPE string.
+
+  CREATE OBJECT lo_order_util.
+
+  IF iv_plot_number IS NOT INITIAL.
+
+    ls_option-fieldname = 'ZZD_ZZFLD000007_SRH'.
+    ls_option-sign      = 'I'.
+    ls_option-option    = 'EQ'.
+    ls_option-low       = iv_plot_number.
+
+    APPEND ls_option TO lt_options.
+
+  ENDIF.
+
+  lo_order_util->search_service_orders(
+    EXPORTING
+      it_options = lt_options
+    IMPORTING
+      ev_error   = lv_error
+      et_results = et_result ).
+
+ENDMETHOD.
+
+
+
+DATA(lo_filter) = io_request->get_filter( ).
+
+DATA lt_ranges TYPE if_rap_query_filter=>tt_name_range_pairs.
+
+lt_ranges = lo_filter->get_as_ranges( ).
+
+
+DATA lv_plot TYPE zzd_zzfld000007.
+
+READ TABLE lt_ranges INTO DATA(ls_range)
+  WITH KEY name = 'ZZD_ZZFLD000007_SRH'.
+
+IF sy-subrc = 0.
+  READ TABLE ls_range-range INTO DATA(ls_sel) INDEX 1.
+  IF sy-subrc = 0.
+    lv_plot = ls_sel-low.
+  ENDIF.
+ENDIF.
+
+
+DATA lt_search_result TYPE zcrmst_query_r_srvo_btil_tab.
+
+NEW zcl_edar_search_service(
+)->search_edar(
+     iv_plot_number = lv_plot
+  IMPORTING
+     et_result = lt_search_result ).
