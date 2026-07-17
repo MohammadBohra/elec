@@ -1,1 +1,48 @@
+@EndUserText.label: 'Search EDAR'
+@ObjectModel.query.implementedBy: 'ABAP:ZCL_EDAR_QUERY_PROVIDER'
 
+define custom entity ZCE_EDAR_RESULT
+{
+  key Guid          : abap.char(32);
+
+      ObjectId      : abap.char(20);
+      Category      : abap.char(10);
+      ProcessType   : abap.char(10);
+}
+
+//****************************************************************
+CLASS zcl_edar_query_provider DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PUBLIC.
+
+  PUBLIC SECTION.
+    INTERFACES if_rap_query_provider.
+
+ENDCLASS.
+
+
+//******************************************
+METHOD if_rap_query_provider~select.
+
+  DATA lt_result TYPE TABLE OF zce_edar_result.
+
+  APPEND VALUE #(
+    Guid        = '00000000000000000000000000000001'
+    ObjectId    = 'TEST0001'
+    Category    = 'Y02'
+    ProcessType = 'YDA5'
+  ) TO lt_result.
+
+  io_response->set_data( lt_result ).
+
+ENDMETHOD.
+
+
+***********************************
+@EndUserText.label: 'EDAR Search'
+
+define service ZUI_EDAR_SEARCH
+{
+  expose ZCE_EDAR_RESULT;
+}
