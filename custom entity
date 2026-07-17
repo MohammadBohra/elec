@@ -1,48 +1,78 @@
-@EndUserText.label: 'Search EDAR'
-@ObjectModel.query.implementedBy: 'ABAP:ZCL_EDAR_QUERY_PROVIDER'
+@EndUserText.label: 'EDAR Search Result'
+@ObjectModel.query.implementedBy:
+  'ABAP:ZCL_EDAR_QUERY_PROVIDER'
 
 define custom entity ZCE_EDAR_RESULT
 {
-  key Guid          : abap.char(32);
+  key Guid                     : abap.raw(16);
 
-      ObjectId      : abap.char(20);
-      Category      : abap.char(10);
-      ProcessType   : abap.char(10);
+      ObjectId                 : abap.char(10);
+
+      ProcessType              : abap.char(4);
+      ProcessTypeTxt           : abap.char(60);
+
+      StatLifecycle            : abap.char(4);
+      StatLifecycleDesc        : abap.char(60);
+
+      SoldToPartyList          : abap.char(80);
+      ContactPersonList        : abap.char(80);
+
+      NetValue                 : abap.curr(15,2);
+      Currency                 : abap.cuky(5);
+
+      Zzd_Zzfld000007_Srh      : abap.char(60);  // Plot Number
+      Zzd_Zzfld0000H6_Srh      : abap.char(50);  // Drawing No
+      Zzd_Zzfld0000Ej_Srh      : abap.char(3);   // Building/Project
+
+      Zzd_Zzfld00000H_Srh      : abap.char(20);
+      Zzd_Zzfld00001Z_Srh      : abap.char(20);
+      Zzd_Zzfld00005K_Srh      : abap.char(40);
 }
 
-//****************************************************************
-CLASS zcl_edar_query_provider DEFINITION
+
+CLASS zcl_edar_search_service DEFINITION
   PUBLIC
   FINAL
   CREATE PUBLIC.
 
   PUBLIC SECTION.
-    INTERFACES if_rap_query_provider.
+
+    METHODS search_edar
+      IMPORTING
+        iv_bp_number TYPE bu_partner OPTIONAL
+        iv_category  TYPE char10 OPTIONAL
+      EXPORTING
+        et_result    TYPE zcrmst_query_r_srvo_btil_tab.
+
+  PROTECTED SECTION.
+  PRIVATE SECTION.
+
+ENDCLASS.
+
+CLASS zcl_edar_search_service IMPLEMENTATION.
+
+  METHOD search_edar.
+
+    CLEAR et_result.
+
+  ENDMETHOD.
 
 ENDCLASS.
 
 
-//******************************************
 METHOD if_rap_query_provider~select.
 
-  DATA lt_result TYPE TABLE OF zce_edar_result.
+  DATA:
+    lt_edar_result TYPE zcrmst_query_r_srvo_btil_tab.
 
-  APPEND VALUE #(
-    Guid        = '00000000000000000000000000000001'
-    ObjectId    = 'TEST0001'
-    Category    = 'Y02'
-    ProcessType = 'YDA5'
-  ) TO lt_result.
+  NEW zcl_edar_search_service(
+  )->search_edar(
+    IMPORTING
+      et_result = lt_edar_result ).
 
-  io_response->set_data( lt_result ).
+  io_response->set_total_number_of_records(
+    lines( lt_edar_result ) ).
+
+* io_response->set_data( ??? )
 
 ENDMETHOD.
-
-
-***********************************
-@EndUserText.label: 'EDAR Search'
-
-define service ZUI_EDAR_SEARCH
-{
-  expose ZCE_EDAR_RESULT;
-}
