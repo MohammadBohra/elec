@@ -1,219 +1,24 @@
-@EndUserText.label: 'EDAR Search Result'
-@ObjectModel.query.implementedBy:
-  'ABAP:ZCL_EDAR_QUERY_PROVIDER'
-
-define custom entity ZCE_EDAR_RESULT
-{
-  key Guid                     : abap.raw(16);
-
-      ObjectId                 : abap.char(10);
-
-      ProcessType              : abap.char(4);
-      ProcessTypeTxt           : abap.char(60);
-
-      StatLifecycle            : abap.char(4);
-      StatLifecycleDesc        : abap.char(60);
-
-      SoldToPartyList          : abap.char(80);
-      ContactPersonList        : abap.char(80);
-
-      NetValue                 : abap.curr(15,2);
-      Currency                 : abap.cuky(5);
-
-      Zzd_Zzfld000007_Srh      : abap.char(60);  // Plot Number
-      Zzd_Zzfld0000H6_Srh      : abap.char(50);  // Drawing No
-      Zzd_Zzfld0000Ej_Srh      : abap.char(3);   // Building/Project
-
-      Zzd_Zzfld00000H_Srh      : abap.char(20);
-      Zzd_Zzfld00001Z_Srh      : abap.char(20);
-      Zzd_Zzfld00005K_Srh      : abap.char(40);
-}
-
-
-CLASS zcl_edar_search_service DEFINITION
-  PUBLIC
-  FINAL
-  CREATE PUBLIC.
-
-  PUBLIC SECTION.
-
-    METHODS search_edar
-      IMPORTING
-        iv_bp_number TYPE bu_partner OPTIONAL
-        iv_category  TYPE char10 OPTIONAL
-      EXPORTING
-        et_result    TYPE zcrmst_query_r_srvo_btil_tab.
-
-  PROTECTED SECTION.
-  PRIVATE SECTION.
-
-ENDCLASS.
-
-CLASS zcl_edar_search_service IMPLEMENTATION.
-
-  METHOD search_edar.
-
-    CLEAR et_result.
-
-  ENDMETHOD.
-
-ENDCLASS.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 METHOD if_rap_query_provider~select.
-
-  DATA lt_search_result TYPE zcrmst_query_r_srvo_btil_tab.
 
   DATA lt_response TYPE TABLE OF zce_edar_result.
 
-  NEW zcl_edar_search_service(
-  )->search_edar(
-    IMPORTING
-      et_result = lt_search_result ).
-
-  LOOP AT lt_search_result INTO DATA(ls_result).
-
-    APPEND VALUE #(
-
-      Guid                  = ls_result-guid
-      ObjectId              = ls_result-object_id
-
-      ProcessType           = ls_result-process_type
-      ProcessTypeTxt        = ls_result-process_type_txt
-
-      StatLifecycle         = ls_result-stat_lifecycle
-      StatLifecycleDesc     = ls_result-stat_lifecycle_desc
-
-      SoldToPartyList       = ls_result-sold_to_party_list
-      ContactPersonList     = ls_result-contact_person_list
-
-      NetValue              = ls_result-net_value
-      Currency              = ls_result-currency
-
-      Zzd_Zzfld000007_Srh   = ls_result-zzd_zzfld000007_srh
-      Zzd_Zzfld0000H6_Srh   = ls_result-zzd_zzfld0000h6_srh
-      Zzd_Zzfld0000Ej_Srh   = ls_result-zzd_zzfld0000ej_srh
-
-      Zzd_Zzfld00000H_Srh   = ls_result-zzd_zzfld00000h_srh
-      Zzd_Zzfld00001Z_Srh   = ls_result-zzd_zzfld00001z_srh
-      Zzd_Zzfld00005K_Srh   = ls_result-zzd_zzfld00005k_srh
-
-    ) TO lt_response.
-
-  ENDLOOP.
+* test record
+  APPEND VALUE #(
+      Guid                 = '00000000000000000000000000000001'
+      ObjectId             = '12345'
+      ProcessType          = 'YDA5'
+      ProcessTypeTxt       = 'Test'
+      StatLifecycle        = '65'
+      StatLifecycleDesc    = 'Approved'
+      SoldToPartyList      = 'TEST'
+      ContactPersonList    = 'TEST'
+      NetValue             = '0'
+      Currency             = 'AED'
+  ) TO lt_response.
 
   io_response->set_total_number_of_records(
-    lines( lt_response ) ).
+      lines( lt_response ) ).
 
   io_response->set_data( lt_response ).
 
 ENDMETHOD.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-PUBLIC SECTION.
-
-  METHODS search_edar
-    IMPORTING
-      iv_plot_number TYPE zzd_zzfld000007 OPTIONAL
-    EXPORTING
-      et_result TYPE zcrmst_query_r_srvo_btil_tab.
-
-
-
-
-
-
-
-
-
-
-METHOD search_edar.
-
-  DATA:
-    lo_order_util TYPE REF TO zwcl_order_utility,
-    lt_options    TYPE sqf_se16_select_options,
-    ls_option     TYPE sqf_se16_select_option,
-    lv_error      TYPE string.
-
-  CREATE OBJECT lo_order_util.
-
-  IF iv_plot_number IS NOT INITIAL.
-
-    ls_option-fieldname = 'ZZD_ZZFLD000007_SRH'.
-    ls_option-sign      = 'I'.
-    ls_option-option    = 'EQ'.
-    ls_option-low       = iv_plot_number.
-
-    APPEND ls_option TO lt_options.
-
-  ENDIF.
-
-  lo_order_util->search_service_orders(
-    EXPORTING
-      it_options = lt_options
-    IMPORTING
-      ev_error   = lv_error
-      et_results = et_result ).
-
-ENDMETHOD.
-
-
-
-DATA(lo_filter) = io_request->get_filter( ).
-
-DATA lt_ranges TYPE if_rap_query_filter=>tt_name_range_pairs.
-
-lt_ranges = lo_filter->get_as_ranges( ).
-
-
-DATA lv_plot TYPE zzd_zzfld000007.
-
-READ TABLE lt_ranges INTO DATA(ls_range)
-  WITH KEY name = 'ZZD_ZZFLD000007_SRH'.
-
-IF sy-subrc = 0.
-  READ TABLE ls_range-range INTO DATA(ls_sel) INDEX 1.
-  IF sy-subrc = 0.
-    lv_plot = ls_sel-low.
-  ENDIF.
-ENDIF.
-
-
-DATA lt_search_result TYPE zcrmst_query_r_srvo_btil_tab.
-
-NEW zcl_edar_search_service(
-)->search_edar(
-     iv_plot_number = lv_plot
-  IMPORTING
-     et_result = lt_search_result ).
