@@ -1,38 +1,23 @@
-DATA(lo_paging) = io_request->get_paging( ).
+CLASS zcl_dar_search DEFINITION.
 
-DATA(lv_page_size) = lo_paging->get_page_size( ).
-DATA(lv_offset)    = lo_paging->get_offset( ).
+PUBLIC SECTION.
 
+methods:
 
-METHOD if_rap_query_provider~select.
+search,
 
-  DATA(lo_paging) = io_request->get_paging( ).
+filter_revision,
 
-  DATA(lv_page_size) = lo_paging->get_page_size( ).
-  DATA(lv_offset)    = lo_paging->get_offset( ).
+filter_y14,
 
-  DATA lt_response TYPE TABLE OF zce_edar_result.
+filter_old_nocs,
 
-  APPEND VALUE #(
-      Guid                 = '12345678901234567890123456789012'
-      ObjectId             = '12345'
-      ProcessType          = 'YDA5'
-      ProcessTypeTxt       = 'Test'
-      StatLifecycle        = '65'
-      StatLifecycleDesc    = 'Approved'
-      SoldToPartyList      = 'Test'
-      ContactPersonList    = 'Test'
-      NetValue             = '0'
-      Currency             = 'AED'
-      Zzd_Zzfld000007_Srh  = '0617'
-  ) TO lt_response.
+filter_duplicates,
 
-  IF io_request->is_total_numb_of_rec_requested( ).
-    io_response->set_total_number_of_records(
-      lines( lt_response )
-    ).
-  ENDIF.
+check_yda5_eligibility,
 
-  io_response->set_data( lt_response ).
+get_latest_yda5,
 
-ENDMETHOD.
+build_final_output.
+
+ENDCLASS.
