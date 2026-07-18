@@ -18,3 +18,14 @@ METHOD if_rap_query_provider~select.
   io_response->set_data( lt_response ).
 
 ENDMETHOD.
+
+
+
+DATA ls_option TYPE sqf_se16_select_option.
+
+ls_option-fieldname = 'PROCESS_TYPE'.
+ls_option-sign      = 'I'.
+ls_option-option    = 'EQ'.
+ls_option-low       = 'YDA5'.
+
+APPEND ls_option TO lt_options.
