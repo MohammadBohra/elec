@@ -1,31 +1,55 @@
 METHOD if_rap_query_provider~select.
 
-  DATA(lo_filter) = io_request->get_filter( ).
   DATA(lo_paging) = io_request->get_paging( ).
-  DATA(lt_sort)   = io_request->get_sort_elements( ).
 
   DATA(lv_top)  = lo_paging->get_page_size( ).
   DATA(lv_skip) = lo_paging->get_offset( ).
 
-  DATA lt_response TYPE TABLE OF zce_edar_result.
+  DATA:
+    lt_search_result TYPE zcrmst_query_r_srvo_btil_tab,
+    lt_response      TYPE TABLE OF zce_edar_result.
+
+  NEW zcl_edar_search_service(
+  )->search_edar(
+    IMPORTING
+      et_result = lt_search_result ).
+
+  LOOP AT lt_search_result INTO DATA(ls_result).
+
+    APPEND VALUE #(
+
+      Guid                  = ls_result-guid
+      ObjectId              = ls_result-object_id
+
+      ProcessType           = ls_result-process_type
+      ProcessTypeTxt        = ls_result-process_type_txt
+
+      StatLifecycle         = ls_result-stat_lifecycle
+      StatLifecycleDesc     = ls_result-stat_lifecycle_desc
+
+      SoldToPartyList       = ls_result-sold_to_party_list
+      ContactPersonList     = ls_result-contact_person_list
+
+      NetValue              = ls_result-net_value
+      Currency              = ls_result-currency
+
+      Zzd_Zzfld000007_Srh   = ls_result-zzd_zzfld000007_srh
+      Zzd_Zzfld0000H6_Srh   = ls_result-zzd_zzfld0000h6_srh
+      Zzd_Zzfld0000Ej_Srh   = ls_result-zzd_zzfld0000ej_srh
+
+      Zzd_Zzfld00000H_Srh   = ls_result-zzd_zzfld00000h_srh
+      Zzd_Zzfld00001Z_Srh   = ls_result-zzd_zzfld00001z_srh
+      Zzd_Zzfld00005K_Srh   = ls_result-zzd_zzfld00005k_srh
+
+    ) TO lt_response.
+
+  ENDLOOP.
 
   IF io_request->is_total_numb_of_rec_requested( ).
     io_response->set_total_number_of_records(
-      lines( lt_response )
-    ).
+      lines( lt_response ) ).
   ENDIF.
 
   io_response->set_data( lt_response ).
 
 ENDMETHOD.
-
-
-
-DATA ls_option TYPE sqf_se16_select_option.
-
-ls_option-fieldname = 'PROCESS_TYPE'.
-ls_option-sign      = 'I'.
-ls_option-option    = 'EQ'.
-ls_option-low       = 'YDA5'.
-
-APPEND ls_option TO lt_options.
