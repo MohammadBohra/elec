@@ -1,23 +1,77 @@
-CLASS zcl_dar_search DEFINITION.
+CLASS zcl_edar_search_service IMPLEMENTATION.
 
-PUBLIC SECTION.
+METHOD search_edar.
 
-methods:
+  DATA:
+      lo_crm_new_model TYPE REF TO zwcl_crm_new_model.
 
-search,
 
-filter_revision,
+*------------------------------------------------------------------
+* Create Object
+*------------------------------------------------------------------
 
-filter_y14,
+  CREATE OBJECT lo_crm_new_model.
 
-filter_old_nocs,
 
-filter_duplicates,
+*------------------------------------------------------------------
+* Hardcoded Globals
+*------------------------------------------------------------------
 
-check_yda5_eligibility,
+  lo_crm_new_model->gs_owner_header-bp_number = '12345678'.
 
-get_latest_yda5,
+  lo_crm_new_model->gv_category      = 'Y02'.
 
-build_final_output.
+  lo_crm_new_model->gv_process_type  = 'YDA5'.
+
+  lo_crm_new_model->gv_sub_category  = ''.
+
+
+*------------------------------------------------------------------
+* Search Criteria 1
+*------------------------------------------------------------------
+
+  CLEAR lo_crm_new_model->gs_electr_se.
+
+  lo_crm_new_model->gs_electr_se-sign   = 'I'.
+  lo_crm_new_model->gs_electr_se-option = 'EQ'.
+  lo_crm_new_model->gs_electr_se-low    = '12345678'.
+
+
+*------------------------------------------------------------------
+* Search Criteria 2
+*------------------------------------------------------------------
+
+  CLEAR lo_crm_new_model->gs_electr_se2.
+
+  lo_crm_new_model->gs_electr_se2-sign   = 'I'.
+  lo_crm_new_model->gs_electr_se2-option = 'EQ'.
+  lo_crm_new_model->gs_electr_se2-low    = ''.
+
+
+
+*------------------------------------------------------------------
+* Create Utility Object if required
+*------------------------------------------------------------------
+
+* CREATE OBJECT lo_crm_new_model->gr_order_util.
+
+
+
+*------------------------------------------------------------------
+* Execute Existing Logic
+*------------------------------------------------------------------
+
+  lo_crm_new_model->search_dar_elect( ).
+
+
+
+*------------------------------------------------------------------
+* Return Results
+*------------------------------------------------------------------
+
+  et_result = lo_crm_new_model->gt_elect_dar.
+
+
+ENDMETHOD.
 
 ENDCLASS.
